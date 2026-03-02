@@ -6,94 +6,153 @@
     <title>CryptoInvestment Tracker</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
-        body { background-color: #f4f7f6; }
-        .crypto-card { transition: transform 0.2s; border: none; border-radius: 15px; }
-        .crypto-card:hover { transform: translateY(-5px); }
+        body { background: #f0f2f5; font-family: 'Segoe UI', sans-serif; }
+        .card { border: none; border-radius: 12px; transition: 0.3s; }
+        .crypto-card:hover { transform: scale(1.02); }
     </style>
 </head>
 <body>
-    <div class="container py-5">
-        <header class="text-center mb-5">
-            <h1 class="display-4 fw-bold text-primary">CryptoInvestment</h1>
-            <p class="text-muted">Seguimiento en tiempo real de activos digitales</p>
-        </header>
+    <div class="container py-4">
+        <h1 class="text-center fw-bold text-primary mb-2">CryptoInvestment</h1>
+        <p class="text-center text-muted mb-4">Seguimiento Dinámico en Tiempo Real</p>
 
-        <!-- Cards de Precios en tiempo real -->
-        <div id="crypto-cards" class="row g-4 mb-5">
-            <div class="text-center">Cargando datos del mercado...</div>
+        <!-- BUSCADOR (Tarea 4) -->
+        <div class="row justify-content-center mb-5">
+            <div class="col-md-6">
+                <div class="input-group shadow-sm">
+                    <input type="text" id="symbolInput" class="form-control" placeholder="Ej: BTC, ETH, ADA...">
+                    <button class="btn btn-primary px-4" onclick="addNewCrypto()">Seguir Moneda</button>
+                </div>
+            </div>
         </div>
 
-        <!-- Gráfico de líneas de tiempo -->
-        <div class="card shadow-sm border-0 p-4" style="border-radius: 15px;">
-            <h3 class="mb-4">Evolución de Precios (Línea de tiempo)</h3>
-            <canvas id="cryptoChart" height="120"></canvas>
+        <!-- CARDS DE PRECIOS -->
+        <div id="cryptoCards" class="row g-3 mb-5"></div>
+
+        <!-- GRÁFICO (Chart.js) -->
+        <div class="card shadow-sm p-4">
+            <h4 class="fw-bold mb-3">Línea de Tiempo de Precios</h4>
+            <canvas id="mainChart" height="100"></canvas>
         </div>
     </div>
 
-    <script>
-        let myChart;
+<script>
+    let chart;
+    let allData = [];
+    let selectedCryptoId = null;
 
-        async function refreshData() {
-            try {
-                // Actualiza datos desde la API de CMC a nuestra DB
-                await fetch('/api/update');
-                // Obtiene los datos actualizados de nuestra DB
-                const res = await fetch('/api/data');
-                const data = await res.json();
-                
-                renderUI(data);
-            } catch (e) { console.error("Error cargando datos", e); }
+    async function addNewCrypto() {
+        const symbol = document.getElementById('symbolInput').value;
+        if(!symbol) return;
+        
+        const res = await fetch('/api/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+            body: JSON.stringify({ symbol })
+        });
+        const data = await res.json();
+        if(data.status === 'success') {
+            document.getElementById('symbolInput').value = '';
+            loadDashboard(); 
+        } else { alert(data.message); }
+    }
+
+    async function loadDashboard() {
+        try {
+            await fetch('/api/update');
+            const res = await fetch('/api/data');
+            allData = await res.json(); // Guardamos los datos globalmente
+            renderUI();
+        } catch (e) { console.error(e); }
+    }
+
+    function renderUI() {
+        const container = document.getElementById('cryptoCards');
+        container.innerHTML = allData.length === 0 ? '<p class="text-center w-100">Busca una moneda para empezar...</p>' : '';
+        
+        // Botón para resetear selección y ver todas
+        if (allData.length > 0) {
+            container.innerHTML += `
+                <div class="col-12 mb-3 text-end">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="selectCrypto(null)">Ver Todas las Monedas</button>
+                </div>`;
         }
 
-        function renderUI(data) {
-            const container = document.getElementById('crypto-cards');
-            container.innerHTML = '';
+        allData.forEach(c => {
+            const latest = c.histories[0];
+            const isSelected = selectedCryptoId == c.id ? 'border-primary border-4 shadow' : 'border-0';
             
-            data.forEach(crypto => {
-                const latest = crypto.histories[0];
-                const colorClass = latest.percent_change_24h >= 0 ? 'text-success' : 'text-danger';
-                
-                container.innerHTML += `
-                    <div class="col-md-4">
-                        <div class="card crypto-card shadow-sm p-3">
-                            <div class="card-body">
-                                <h6 class="text-muted mb-1">${crypto.name}</h6>
-                                <h3 class="fw-bold">${crypto.symbol}</h3>
-                                <h2 class="text-dark">$${parseFloat(latest.price).toLocaleString()}</h2>
-                                <p class="${colorClass} fw-bold mb-0">
-                                    ${latest.percent_change_24h}% (24h)
-                                </p>
-                            </div>
+            container.innerHTML += `
+                <div class="col-md-4 col-6">
+                    <div class="card shadow-sm p-3 mb-3 crypto-card ${isSelected}" 
+                         style="cursor: pointer; border-radius: 15px;" 
+                         onclick="selectCrypto(${c.id})">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted fw-bold">${c.name} (${c.symbol})</small>
+                            ${selectedCryptoId == c.id ? '<span class="badge bg-primary">Seleccionada</span>' : ''}
                         </div>
-                    </div>`;
-            });
-            updateChart(data);
-        }
+                        <h2 class="mb-0 fw-bold">$${parseFloat(latest.price).toLocaleString(undefined, {minimumFractionDigits: 2})}</h2>
+                        <p class="mb-0 ${latest.percent_change_24h >= 0 ? 'text-success' : 'text-danger'} fw-bold">
+                            ${latest.percent_change_24h}% (24h)
+                        </p>
+                    </div>
+                </div>`;
+        });
+        renderChart();
+    }
 
-        function updateChart(data) {
-            const ctx = document.getElementById('cryptoChart').getContext('2d');
-            const labels = data[0].histories.map(h => new Date(h.created_at).toLocaleTimeString()).reverse();
-            
-            const datasets = data.map(crypto => ({
-                label: crypto.symbol,
-                data: crypto.histories.map(h => h.price).reverse(),
-                borderWidth: 3,
-                tension: 0.4,
-                pointRadius: 0
-            }));
+    // Tarea 4: Lógica para SELECCIONAR criptomonedas
+    function selectCrypto(id) {
+        selectedCryptoId = id;
+        renderUI(); // Re-renderiza tarjetas para mostrar el borde azul y actualiza el gráfico
+    }
 
-            if (myChart) myChart.destroy();
-            myChart = new Chart(ctx, {
-                type: 'line',
-                data: { labels, datasets },
-                options: { responsive: true, plugins: { legend: { position: 'top' } } }
-            });
-        }
+    function renderChart() {
+        if(allData.length === 0) return;
+        const ctx = document.getElementById('mainChart').getContext('2d');
+        
+        // Filtramos los datos según la selección
+        const dataToDisplay = selectedCryptoId 
+            ? allData.filter(c => c.id === selectedCryptoId) 
+            : allData;
 
-        // Actualización automática cada 30 segundos (Sin recargar la página)
-        refreshData();
-        setInterval(refreshData, 30000);
-    </script>
+        const labels = dataToDisplay[0].histories.map(h => new Date(h.created_at).toLocaleTimeString()).reverse();
+        const datasets = dataToDisplay.map(c => ({
+            label: c.symbol,
+            data: c.histories.map(h => h.price).reverse(),
+            borderColor: getCryptoColor(c.symbol),
+            backgroundColor: getCryptoColor(c.symbol, 0.1),
+            fill: selectedCryptoId ? true : false, // Sombreado solo si seleccionamos una
+            tension: 0.3, 
+            pointRadius: 4
+        }));
+
+        if(chart) chart.destroy();
+        chart = new Chart(ctx, { 
+            type: 'line', 
+            data: { labels, datasets },
+            options: {
+                plugins: {
+                    title: {
+                        display: true,
+                        text: selectedCryptoId ? 'Detalle Histórico de ' + dataToDisplay[0].symbol : 'Comparativa del Mercado'
+                    }
+                }
+            }
+        });
+    }
+
+    // Función auxiliar para colores consistentes
+    function getCryptoColor(symbol, alpha = 1) {
+        const colors = { 'BTC': '#f7931a', 'ETH': '#627eea', 'SOL': '#14f195', 'ADA': '#0033ad', 'BNB': '#f3ba2f' };
+        const base = colors[symbol] || '#' + Math.floor(Math.random()*16777215).toString(16);
+        return base + (alpha < 1 ? Math.floor(alpha * 255).toString(16).padStart(2, '0') : '');
+    }
+
+    loadDashboard();
+    setInterval(loadDashboard, 60000);
+</script>
 </body>
 </html>
