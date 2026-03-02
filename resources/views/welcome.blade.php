@@ -79,7 +79,7 @@
                 <div class="col-md-4 col-6">
                     <div class="card shadow-sm p-3 mb-2 crypto-card ${isSelected}" onclick="selectCrypto(${c.id})">
                         <small class="text-muted fw-bold d-block">${c.name} (${c.symbol})</small>
-                        <h3 class="mb-0 fw-bold">$${parseFloat(latest.price).toLocaleString(undefined, {minimumFractionDigits: 2})}</h3>
+                        <h3 class="mb-0 fw-bold">$${parseFloat(latest.price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</h3>
                         <p class="mb-0 ${colorClass} fw-bold" style="font-size: 0.9rem">
                             ${parseFloat(latest.percent_change_24h).toFixed(2)}% (24h)
                         </p>
