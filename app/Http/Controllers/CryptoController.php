@@ -13,12 +13,12 @@ class CryptoController extends Controller
 
     public function index() { return view('welcome'); }
 
-    // Tarea 4: Lógica para buscar y agregar criptomonedas
+
     public function addCrypto(Request $request)
     {
         $symbol = strtoupper($request->symbol);
         
-        // Consultamos a CoinMarketCap si el símbolo existe
+
         $response = Http::withHeaders(['X-CMC_PRO_API_KEY' => $this->apiKey])
             ->get('https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest', ['symbol' => $symbol]);
 
@@ -26,7 +26,7 @@ class CryptoController extends Controller
             $data = $response->json()['data'][$symbol];
             $crypto = Cryptocurrency::firstOrCreate(['symbol' => $symbol], ['name' => $data['name']]);
             
-            // Guardamos el primer registro de precio
+
             $this->saveHistory($crypto, $data);
             return response()->json(['status' => 'success', 'message' => "¡$symbol agregada!"]);
         }
@@ -34,7 +34,7 @@ class CryptoController extends Controller
         return response()->json(['status' => 'error', 'message' => 'Moneda no encontrada'], 404);
     }
 
-    // Tarea 5: Actualización automática de todos los datos
+
     public function updateAll()
     {
         $cryptos = Cryptocurrency::all();
@@ -66,7 +66,7 @@ class CryptoController extends Controller
 
     public function getData() {
         return Cryptocurrency::with(['histories' => function($q) {
-            $q->latest()->take(20); // 20 puntos para el gráfico
+            $q->latest()->take(20); 
         }])->get();
     }
 }

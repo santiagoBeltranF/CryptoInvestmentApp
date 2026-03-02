@@ -18,7 +18,6 @@
         <h1 class="text-center fw-bold text-primary mb-2">CryptoInvestment</h1>
         <p class="text-center text-muted mb-4">Seguimiento Dinámico en Tiempo Real</p>
 
-        <!-- BUSCADOR (Tarea 4) -->
         <div class="row justify-content-center mb-5">
             <div class="col-md-6">
                 <div class="input-group shadow-sm">
@@ -28,10 +27,10 @@
             </div>
         </div>
 
-        <!-- CARDS DE PRECIOS -->
+    
         <div id="cryptoCards" class="row g-3 mb-5"></div>
 
-        <!-- GRÁFICO (Chart.js) -->
+   
         <div class="card shadow-sm p-4">
             <h4 class="fw-bold mb-3">Línea de Tiempo de Precios</h4>
             <canvas id="mainChart" height="100"></canvas>
@@ -63,7 +62,7 @@
         try {
             await fetch('/api/update');
             const res = await fetch('/api/data');
-            allData = await res.json(); // Guardamos los datos globalmente
+            allData = await res.json(); 
             renderUI();
         } catch (e) { console.error(e); }
     }
@@ -72,7 +71,7 @@
         const container = document.getElementById('cryptoCards');
         container.innerHTML = allData.length === 0 ? '<p class="text-center w-100">Busca una moneda para empezar...</p>' : '';
         
-        // Botón para resetear selección y ver todas
+
         if (allData.length > 0) {
             container.innerHTML += `
                 <div class="col-12 mb-3 text-end">
@@ -103,17 +102,17 @@
         renderChart();
     }
 
-    // Tarea 4: Lógica para SELECCIONAR criptomonedas
+  
     function selectCrypto(id) {
         selectedCryptoId = id;
-        renderUI(); // Re-renderiza tarjetas para mostrar el borde azul y actualiza el gráfico
+        renderUI(); 
     }
 
     function renderChart() {
         if(allData.length === 0) return;
         const ctx = document.getElementById('mainChart').getContext('2d');
         
-        // Filtramos los datos según la selección
+
         const dataToDisplay = selectedCryptoId 
             ? allData.filter(c => c.id === selectedCryptoId) 
             : allData;
@@ -124,7 +123,7 @@
             data: c.histories.map(h => h.price).reverse(),
             borderColor: getCryptoColor(c.symbol),
             backgroundColor: getCryptoColor(c.symbol, 0.1),
-            fill: selectedCryptoId ? true : false, // Sombreado solo si seleccionamos una
+            fill: selectedCryptoId ? true : false, 
             tension: 0.3, 
             pointRadius: 4
         }));
@@ -144,7 +143,7 @@
         });
     }
 
-    // Función auxiliar para colores consistentes
+   
     function getCryptoColor(symbol, alpha = 1) {
         const colors = { 'BTC': '#f7931a', 'ETH': '#627eea', 'SOL': '#14f195', 'ADA': '#0033ad', 'BNB': '#f3ba2f' };
         const base = colors[symbol] || '#' + Math.floor(Math.random()*16777215).toString(16);
