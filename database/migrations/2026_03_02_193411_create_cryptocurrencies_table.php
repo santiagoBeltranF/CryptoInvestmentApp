@@ -6,21 +6,17 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
+ 
     public function up() {
     Schema::create('cryptocurrencies', function ($table) {
         $table->id();
-        $table->string('symbol')->unique(); // BTC, ETH
+        $table->string('symbol')->unique();
         $table->string('name');
         $table->timestamps();
     });
 }
 
-    /**
-     * Reverse the migrations.
-     */
+  
     public function down(): void
     {
         Schema::dropIfExists('cryptocurrencies');
